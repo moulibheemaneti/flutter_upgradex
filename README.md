@@ -24,6 +24,7 @@ Just run `flutter upgradex` and let every dependency upgrade itself — safely.
 
 ```
 ✦ Upgrades each dependency individually — pinpoints exactly what breaks
+✦ Skips packages already on the latest version — no unnecessary work
 ✦ Runs flutter analyze after every upgrade — catches issues immediately
 ✦ Auto-rollback — broken packages revert to their original version
 ✦ Failure log — every rollback is recorded with the error that caused it
@@ -58,22 +59,25 @@ Run it from the root of your Flutter project. It walks through every dependency 
 
   ── Upgrading dependencies ─────────────────
 
-  [1/12] dio
-         0.0.0 → 5.7.0
-         Running flutter analyze... ✅ kept
+  [1/4] dio
+        ^4.0.6 → ^5.7.0
+        Running flutter analyze... ✅ kept
 
-  [2/12] go_router
-         0.0.0 → 14.6.3
-         Running flutter analyze... ✅ kept
+  [2/4] go_router
+        already latest (^14.6.3)
 
-  [3/12] some_package
-         0.0.0 → 2.1.0
-         Running flutter analyze... ❌ failed
-         Rolling back to 1.9.4
+  [3/4] some_package
+        ^1.9.4 → ^2.1.0
+        Running flutter analyze... ❌ failed
+        Rolling back to ^1.9.4
+
+  [4/4] flutter_bloc
+        ^8.1.6 → ^9.1.0
+        Running flutter analyze... ✅ kept
 
   ── Done ───────────────────────────────────
 
-  10 upgraded   1 rolled back   1 already latest
+  2 upgraded   1 rolled back   1 already latest
 
   See flutter_upgradex_logs.txt for rollback details.
 ```
@@ -109,10 +113,12 @@ you run: flutter_upgradex
                   └── detects fvm (.fvmrc / .fvm) → uses fvm flutter, otherwise flutter
                            └── for each dependency:
                                     └── fetches latest version from pub.dev
-                                             └── writes new version constraint
-                                                      └── runs flutter analyze
-                                                               ├── passes → keep ✅
-                                                               └── fails  → rollback + log ❌
+                                             ├── already latest → skip ⏭️
+                                             └── new version available:
+                                                      └── writes new version constraint
+                                                               └── runs flutter analyze
+                                                                        ├── passes → keep ✅
+                                                                        └── fails  → rollback + log ❌
 ```
 
 `dart pub global activate` places the `flutter_upgradex` binary on your PATH. Run it directly — no shell tricks, no aliases needed. FVM is auto-detected from your project directory.

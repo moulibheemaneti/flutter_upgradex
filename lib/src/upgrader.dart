@@ -7,11 +7,6 @@ import 'pubspec_utils.dart';
 
 /// Upgrades Flutter/Dart dependencies one at a time, validating each upgrade
 /// with `flutter analyze` before keeping it.
-///
-/// Usage:
-/// ```dart
-/// await FlutterUpgradeX().run();
-/// ```
 class FlutterUpgradeX {
   static const _logFile = 'flutter_upgradex_logs.txt';
 
@@ -24,16 +19,6 @@ class FlutterUpgradeX {
   }
 
   /// Runs the upgrade loop against the `pubspec.yaml` in the current directory.
-  ///
-  /// For every hosted dependency in `dependencies` and `dev_dependencies`:
-  /// 1. Fetches the latest version from pub.dev.
-  /// 2. Writes the new constraint to `pubspec.yaml`.
-  /// 3. Runs `flutter analyze`.
-  ///    - Pass → keep the upgrade, move to the next package.
-  ///    - Fail → roll back to the previous constraint and log the failure.
-  ///
-  /// If any packages fail, a `flutter_upgradex_logs.txt` file is written to
-  /// the current directory listing each failed package and reason.
   Future<void> run() async {
     final pubspecFile = File('pubspec.yaml');
 
@@ -46,76 +31,109 @@ class FlutterUpgradeX {
     }
 
     _ensureLogFileGitignored();
-
-    stdout.writeln('Reading pubspec.yaml…\n');
+    _printHeader();
 
     final originalContent = pubspecFile.readAsStringSync();
-
     final yaml = loadYaml(originalContent) as YamlMap;
 
-    final failures = <String, String>{};
-
-    var currentContent = originalContent;
-
+    // Collect all hosted deps with their current constraints upfront.
+    final allDeps = <(String, String)>[];
     for (final section in ['dependencies', 'dev_dependencies']) {
       final deps = yaml[section];
-
       if (deps is! YamlMap) continue;
-
       for (final entry in deps.entries) {
-        final name = entry.key as String;
-
-        if (!PubspecUtils.isHostedDep(entry.value)) continue;
-
-        stdout.write('  $name … ');
-
-        final latest = await _fetchLatestVersion(name);
-
-        if (latest == null) {
-          stdout.writeln('skipped (could not fetch version from pub.dev)');
-          continue;
-        }
-
-        final newConstraint = '^$latest';
-
-        final newContent = PubspecUtils.setConstraint(
-          currentContent,
-          name,
-          newConstraint,
-        );
-
-        pubspecFile.writeAsStringSync(newContent);
-        await _pubGet();
-
-        if (await _analyze()) {
-          stdout.writeln('\x1b[32m✓ upgraded to $newConstraint\x1b[0m');
-          currentContent = newContent;
-        } else {
-          stdout.writeln('\x1b[31m✗ rolled back (analyze failed)\x1b[0m');
-          pubspecFile.writeAsStringSync(currentContent);
-          await _pubGet();
-          failures[name] =
-              'flutter analyze failed after upgrading to $newConstraint';
+        if (PubspecUtils.isHostedDep(entry.value)) {
+          allDeps.add((entry.key as String, entry.value as String));
         }
       }
     }
+
+    _printSectionHeader('Upgrading dependencies');
+
+    final failures = <String, String>{};
+    var currentContent = originalContent;
+    var upgraded = 0;
+    var alreadyLatest = 0;
+
+    for (var i = 0; i < allDeps.length; i++) {
+      final (name, currentConstraint) = allDeps[i];
+      stdout.writeln('  \x1b[34m[${i + 1}/${allDeps.length}]\x1b[0m $name');
+
+      final latest = await _fetchLatestVersion(name);
+      if (latest == null) {
+        stdout.writeln(
+          '        \x1b[33mskipped (could not fetch from pub.dev)\x1b[0m\n',
+        );
+        continue;
+      }
+
+      final newConstraint = '^$latest';
+
+      if (currentConstraint == newConstraint) {
+        stdout.writeln('        already latest ($newConstraint)\n');
+        alreadyLatest++;
+        continue;
+      }
+
+      stdout.writeln(
+        '        \x1b[90m$currentConstraint\x1b[0m → \x1b[36m$newConstraint\x1b[0m',
+      );
+      stdout.write('        Running flutter analyze... ');
+
+      final newContent = PubspecUtils.setConstraint(
+        currentContent,
+        name,
+        newConstraint,
+      );
+      pubspecFile.writeAsStringSync(newContent);
+      await _pubGet();
+
+      if (await _analyze()) {
+        stdout.writeln('\x1b[32m✅ kept\x1b[0m\n');
+        currentContent = newContent;
+        upgraded++;
+      } else {
+        stdout.writeln('\x1b[31m❌ failed\x1b[0m');
+        stdout.writeln('        Rolling back to $currentConstraint\n');
+        pubspecFile.writeAsStringSync(currentContent);
+        await _pubGet();
+        failures[name] =
+            'flutter analyze failed after upgrading to $newConstraint';
+      }
+    }
+
+    _printSectionHeader('Done');
+
+    stdout.writeln(
+      '  \x1b[32m$upgraded upgraded\x1b[0m   '
+      '\x1b[31m${failures.length} rolled back\x1b[0m   '
+      '\x1b[90m$alreadyLatest already latest\x1b[0m\n',
+    );
 
     if (failures.isNotEmpty) {
       final buf = StringBuffer('Packages that failed flutter analyze:\n\n');
-
       for (final e in failures.entries) {
         buf.writeln('${e.key}: ${e.value}');
       }
-
       File(_logFile).writeAsStringSync(buf.toString());
-
       stdout.writeln(
-        '\n\x1b[33m${failures.length} package(s) rolled back. '
-        'See $_logFile for details.\x1b[0m',
+        '  \x1b[33mSee $_logFile for rollback details.\x1b[0m\n',
       );
-    } else {
-      stdout.writeln('\n\x1b[32mAll upgrades applied successfully!\x1b[0m');
     }
+  }
+
+  void _printHeader() {
+    stdout.writeln();
+    stdout.writeln('  ╔══════════════════════════════════════════╗');
+    stdout.writeln('  ║          🔼  flutter upgradex            ║');
+    stdout.writeln('  ╚══════════════════════════════════════════╝');
+    stdout.writeln();
+  }
+
+  // Total line width is 45. Formula: 39 - title.length trailing dashes.
+  void _printSectionHeader(String title) {
+    final dashes = '─' * (39 - title.length);
+    stdout.writeln('  ── $title $dashes\n');
   }
 
   void _ensureLogFileGitignored() {
@@ -138,17 +156,11 @@ class FlutterUpgradeX {
       final request = await client.getUrl(
         Uri.parse('https://pub.dev/api/packages/$package'),
       );
-
       request.headers.set('accept', 'application/json');
-
       final response = await request.close();
-
       if (response.statusCode != 200) return null;
-
       final body = await response.transform(utf8.decoder).join();
-
       final data = jsonDecode(body) as Map<String, dynamic>;
-
       return (data['latest'] as Map<String, dynamic>)['version'] as String?;
     } catch (_) {
       return null;
@@ -159,8 +171,11 @@ class FlutterUpgradeX {
 
   Future<void> _pubGet() async {
     final cmd = _flutterCmd;
-    await Process.run(cmd.first, [...cmd.skip(1), 'pub', 'get'],
-        runInShell: true);
+    await Process.run(
+      cmd.first,
+      [...cmd.skip(1), 'pub', 'get'],
+      runInShell: true,
+    );
   }
 
   Future<bool> _analyze() async {

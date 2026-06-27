@@ -1,12 +1,9 @@
 name: flutter_upgradex
-description: >-
-  Upgrade your Flutter dependencies one by one — safely. Walks through every
-  dependency in pubspec.yaml, upgrades each to its latest pub.dev version, runs
-  flutter analyze, and rolls back any package that breaks your project.
+description: Upgrade Flutter dependencies one by one — safely. Runs flutter analyze after each upgrade and auto-rolls back anything that breaks.
 repository: https://github.com/moulibheemaneti/flutter_upgradex
 homepage: https://github.com/moulibheemaneti/flutter_upgradex
 issue_tracker: https://github.com/moulibheemaneti/flutter_upgradex/issues
-version: 0.0.2
+version: 0.0.3
 
 topics:
   - cli

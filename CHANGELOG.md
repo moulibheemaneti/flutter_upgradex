@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.2](https://github.com/moulibheemaneti/flutter_upgradex/compare/flutter_upgradex-v0.0.1...flutter_upgradex-v0.1.0) (2026-06-27)
+
+### Features
+
+* detect fvm and auto-gitignore log file at runtime ([#2](https://github.com/moulibheemaneti/flutter_upgradex/issues/2)) ([c5fc7f8](https://github.com/moulibheemaneti/flutter_upgradex/commit/c5fc7f8d28f301aa3a5ea29843fd393c72128d63))
+
 ## [0.0.1] - 2026-06-27
 
 ### Added

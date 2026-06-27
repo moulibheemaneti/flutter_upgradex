@@ -6,7 +6,7 @@ description: >-
 repository: https://github.com/moulibheemaneti/flutter_upgradex
 homepage: https://github.com/moulibheemaneti/flutter_upgradex
 issue_tracker: https://github.com/moulibheemaneti/flutter_upgradex/issues
-version: 0.0.1
+version: 0.0.2
 
 topics:
   - cli

@@ -15,6 +15,14 @@ import 'pubspec_utils.dart';
 class FlutterUpgradeX {
   static const _logFile = 'flutter_upgradex_logs.txt';
 
+  /// Returns `['fvm', 'flutter']` when an fvm config is detected in the
+  /// working directory, otherwise `['flutter']`.
+  List<String> get _flutterCmd {
+    final hasFvm =
+        File('.fvmrc').existsSync() || Directory('.fvm').existsSync();
+    return hasFvm ? ['fvm', 'flutter'] : ['flutter'];
+  }
+
   /// Runs the upgrade loop against the `pubspec.yaml` in the current directory.
   ///
   /// For every hosted dependency in `dependencies` and `dev_dependencies`:
@@ -36,6 +44,8 @@ class FlutterUpgradeX {
       );
       exit(1);
     }
+
+    _ensureLogFileGitignored();
 
     stdout.writeln('Reading pubspec.yaml…\n');
 
@@ -108,6 +118,20 @@ class FlutterUpgradeX {
     }
   }
 
+  void _ensureLogFileGitignored() {
+    final gitignore = File('.gitignore');
+    final entry = _logFile;
+    const block = '\n# flutter_upgradex logs\n$_logFile\n';
+
+    if (gitignore.existsSync()) {
+      final lines = gitignore.readAsLinesSync();
+      if (lines.any((l) => l.trim() == entry)) return;
+      gitignore.writeAsStringSync(block, mode: FileMode.append);
+    } else {
+      gitignore.writeAsStringSync(block.trimLeft());
+    }
+  }
+
   Future<String?> _fetchLatestVersion(String package) async {
     final client = HttpClient();
     try {
@@ -134,13 +158,16 @@ class FlutterUpgradeX {
   }
 
   Future<void> _pubGet() async {
-    await Process.run('flutter', ['pub', 'get'], runInShell: true);
+    final cmd = _flutterCmd;
+    await Process.run(cmd.first, [...cmd.skip(1), 'pub', 'get'],
+        runInShell: true);
   }
 
   Future<bool> _analyze() async {
+    final cmd = _flutterCmd;
     final result = await Process.run(
-      'flutter',
-      ['analyze'],
+      cmd.first,
+      [...cmd.skip(1), 'analyze'],
       runInShell: true,
     );
     return result.exitCode == 0;

@@ -3,7 +3,7 @@ description: Upgrade Flutter dependencies one by one — safely. Runs flutter an
 repository: https://github.com/moulibheemaneti/flutter_upgradex
 homepage: https://github.com/moulibheemaneti/flutter_upgradex
 issue_tracker: https://github.com/moulibheemaneti/flutter_upgradex/issues
-version: 0.1.0
+version: 0.1.1
 
 topics:
   - cli

@@ -88,7 +88,8 @@ class FlutterUpgradeX {
       pubspecFile.writeAsStringSync(newContent);
       await _pubGet();
 
-      if (await _analyze()) {
+      final (passed, analyzeOutput) = await _analyze();
+      if (passed) {
         stdout.writeln('\x1b[32m✅ kept\x1b[0m\n');
         currentContent = newContent;
         upgraded++;
@@ -97,8 +98,8 @@ class FlutterUpgradeX {
         stdout.writeln('        Rolling back to $currentConstraint\n');
         pubspecFile.writeAsStringSync(currentContent);
         await _pubGet();
-        failures[name] =
-            'flutter analyze failed after upgrading to $newConstraint';
+        failures[name] = analyzeOutput;
+        _appendToLog(name, newConstraint, analyzeOutput);
       }
     }
 
@@ -111,15 +112,22 @@ class FlutterUpgradeX {
     );
 
     if (failures.isNotEmpty) {
-      final buf = StringBuffer('Packages that failed flutter analyze:\n\n');
-      for (final e in failures.entries) {
-        buf.writeln('${e.key}: ${e.value}');
-      }
-      File(_logFile).writeAsStringSync(buf.toString());
       stdout.writeln(
         '  \x1b[33mSee $_logFile for rollback details.\x1b[0m\n',
       );
     }
+  }
+
+  void _appendToLog(String name, String newConstraint, String analyzeOutput) {
+    final buf = StringBuffer();
+    buf.writeln('─' * 60);
+    buf.writeln('Package : $name (attempted $newConstraint)');
+    buf.writeln('Time    : ${DateTime.now().toIso8601String()}');
+    buf.writeln('flutter analyze output:');
+    buf.writeln();
+    buf.writeln(analyzeOutput.trim());
+    buf.writeln();
+    File(_logFile).writeAsStringSync(buf.toString(), mode: FileMode.append);
   }
 
   void _printHeader() {
@@ -178,13 +186,17 @@ class FlutterUpgradeX {
     );
   }
 
-  Future<bool> _analyze() async {
+  Future<(bool, String)> _analyze() async {
     final cmd = _flutterCmd;
     final result = await Process.run(
       cmd.first,
       [...cmd.skip(1), 'analyze'],
       runInShell: true,
     );
-    return result.exitCode == 0;
+    final output = [
+      if ((result.stdout as String).trim().isNotEmpty) result.stdout as String,
+      if ((result.stderr as String).trim().isNotEmpty) result.stderr as String,
+    ].join('\n').trim();
+    return (result.exitCode == 0, output);
   }
 }

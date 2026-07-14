@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2](https://github.com/moulibheemaneti/flutter_upgradex/compare/flutter_upgradex-v0.1.1...flutter_upgradex-v0.2.0) (2026-07-14)
+
+### Features
+
+* upgrade flutter sdk to 3.44.6 ([#8](https://github.com/moulibheemaneti/flutter_upgradex/issues/8)) ([9068b6d](https://github.com/moulibheemaneti/flutter_upgradex/commit/9068b6d332da6c6a6ee779f076f863fd4bfef35d))
+
 ## [0.1.1](https://github.com/moulibheemaneti/flutter_upgradex/compare/flutter_upgradex-v0.1.0...flutter_upgradex-v0.1.1) (2026-06-29)
 
 

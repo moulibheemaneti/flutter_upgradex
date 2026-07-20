@@ -18,19 +18,31 @@ Just run `flutter upgradex` and let every dependency upgrade itself — safely.
 
 ## Why flutter_upgradex?
 
-`flutter pub upgrade` upgrades everything at once. When something breaks, you have no idea *which* package caused it.
+`flutter pub upgrade` upgrades everything at once. When something breaks, you have no idea *which* package caused it. Upgrading strictly one-by-one is safe, but slow.
 
-`flutter_upgradex` does it one at a time:
+`flutter_upgradex` gives you the best of both — a fast batch first, then surgical precision only where it's needed:
 
 ```
-✦ Upgrades each dependency individually — pinpoints exactly what breaks
-✦ Skips packages already on the latest version — no unnecessary work
-✦ Runs flutter analyze after every upgrade — catches issues immediately
-✦ Auto-rollback — broken packages revert to their original version
+✦ Batch-first — applies every resolvable upgrade at once and analyzes a single time
+✦ Phased fallback — packages still behind their latest are then tried one at a time
+✦ Runtime choice — pick "all in one go" (fastest) or "in phases" (safest) each run
+✦ Runs flutter analyze after every step — catches issues immediately
+✦ Auto-rollback — a broken batch or package reverts to its original version
 ✦ Failure log — every rollback is recorded with the error that caused it
 ✦ FVM aware — works with flutter or fvm flutter automatically
 ✦ Zero config — install once, run from any Flutter project
 ```
+
+### Two modes
+
+On every run you're asked how to proceed:
+
+| Mode | What happens | Best for |
+|---|---|---|
+| **All in one go** | Runs `flutter pub outdated`, applies all *resolvable* upgrades in one batch, analyzes once | Speed — routine bumps |
+| **In phases** | Same batch first, then walks every package still held back from its latest version one at a time, with per-package analyze + rollback | Safety — major-version jumps |
+
+On a non-interactive terminal (CI) the tool defaults to **phases**.
 
 ---
 
@@ -50,34 +62,41 @@ That's it. No config files, no project setup.
 flutter_upgradex
 ```
 
-Run it from the root of your Flutter project. It walks through every dependency automatically:
+Run it from the root of your Flutter project. It asks how you'd like to upgrade, then does the work:
 
 ```
   ╔══════════════════════════════════════════╗
   ║          🔼  flutter upgradex            ║
   ╚══════════════════════════════════════════╝
 
-  ── Upgrading dependencies ─────────────────
+  How would you like to upgrade?
 
-  [1/4] dio
-        ^4.0.6 → ^5.7.0
-        Running flutter analyze... ✅ kept
+    [1] All in one go  — batch every resolvable upgrade, analyze once (fastest)
+    [2] In phases      — batch the safe ones, then one-by-one for the rest (safest)
 
-  [2/4] go_router
-        already latest (^14.6.3)
+  Choose [1/2] (default 2): 2
 
-  [3/4] some_package
+  ── Scanning ───────────────────────────────
+
+  Running flutter pub outdated... done
+
+  ── Phase 1 · batch resolvable upgrades ────
+
+  • dio         ^4.0.6 → ^5.7.0
+  • flutter_bloc ^8.1.6 → ^8.1.9
+
+  Running flutter analyze on the batch... ✅ kept (2)
+
+  ── Phase 2 · one-by-one ───────────────────
+
+  [1/1] some_package
         ^1.9.4 → ^2.1.0
         Running flutter analyze... ❌ failed
         Rolling back to ^1.9.4
 
-  [4/4] flutter_bloc
-        ^8.1.6 → ^9.1.0
-        Running flutter analyze... ✅ kept
-
   ── Done ───────────────────────────────────
 
-  2 upgraded   1 rolled back   1 already latest
+  2 upgraded   1 rolled back
 
   See flutter_upgradex_logs.txt for rollback details.
 ```
@@ -111,14 +130,18 @@ After a run you'll have:
 you run: flutter_upgradex
          └── reads your pubspec.yaml
                   └── detects fvm (.fvmrc / .fvm) → uses fvm flutter, otherwise flutter
-                           └── for each dependency:
-                                    └── fetches latest version from pub.dev
-                                             ├── already latest → skip ⏭️
-                                             └── new version available:
-                                                      └── writes new version constraint
-                                                               └── runs flutter analyze
-                                                                        ├── passes → keep ✅
-                                                                        └── fails  → rollback + log ❌
+                           └── asks: all in one go, or in phases?
+                                    └── runs flutter pub outdated --json
+                                             │
+                                             ├── Phase 1 (both modes): batch every resolvable upgrade
+                                             │        └── runs flutter analyze once
+                                             │                 ├── passes → keep the batch ✅
+                                             │                 └── fails  → roll back the whole batch ❌
+                                             │
+                                             └── Phase 2 (phases mode): packages still behind latest
+                                                      └── for each, bump → analyze
+                                                               ├── passes → keep ✅
+                                                               └── fails  → rollback + log ❌
 ```
 
 `dart pub global activate` places the `flutter_upgradex` binary on your PATH. Run it directly — no shell tricks, no aliases needed. FVM is auto-detected from your project directory.

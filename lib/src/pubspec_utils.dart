@@ -22,4 +22,16 @@ class PubspecUtils {
     );
     return content.replaceFirstMapped(pattern, (m) => '${m[1]}$constraint');
   }
+
+  /// Reads the current version constraint for [package] in [content].
+  ///
+  /// Returns the first occurrence's constraint (dependencies before
+  /// dev_dependencies), or null if [package] is not present as a hosted dep.
+  static String? getConstraint(String content, String package) {
+    final pattern = RegExp(
+      r'^\s+' + RegExp.escape(package) + r':\s*(.+)$',
+      multiLine: true,
+    );
+    return pattern.firstMatch(content)?.group(1)?.trim();
+  }
 }

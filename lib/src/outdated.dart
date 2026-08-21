@@ -32,14 +32,12 @@ class OutdatedPackage {
   String? get effectiveResolvable => resolvable ?? current;
 
   /// True when pub can resolve a newer version than what's installed.
-  bool get hasResolvableUpgrade =>
-      resolvable != null && resolvable != current;
+  bool get hasResolvableUpgrade => resolvable != null && resolvable != current;
 
   /// True when the absolute latest is newer than what a batch upgrade reaches,
   /// i.e. the package is held back by other constraints and needs individual
   /// attention.
-  bool get isBehindLatest =>
-      latest != null && latest != effectiveResolvable;
+  bool get isBehindLatest => latest != null && latest != effectiveResolvable;
 
   /// The best target for a one-by-one attempt: latest if available, else the
   /// resolvable version.

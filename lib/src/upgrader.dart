@@ -192,7 +192,8 @@ class FlutterUpgradeX {
         continue;
       }
 
-      final from = liveConstraint ?? (p.current == null ? '?' : '^${p.current}');
+      final from =
+          liveConstraint ?? (p.current == null ? '?' : '^${p.current}');
       stdout.writeln(
         '        \x1b[90m$from\x1b[0m → \x1b[36m$newConstraint\x1b[0m',
       );
